@@ -48,7 +48,7 @@ class SpotLight(pg.sprite.DirtySprite):
         new_center = self.rotator(self.angle, self.origin)
         self.rect = self.image.get_rect(center=new_center)
 
-    def update(self, dt, dirty):
+    def update(self, dt):
         self.elapsed += dt
         interp = math.sin(2*math.pi*(self.elapsed/float(self.period)))
         self.elapsed %= self.period
@@ -57,7 +57,6 @@ class SpotLight(pg.sprite.DirtySprite):
             self.angle = int(angle)
             self.make_image()
             self.dirty = 1
-            dirty.append(self.rect)
 
 
 class Control(object):
@@ -88,12 +87,11 @@ class Control(object):
                 self.done = True
 
     def update(self, dt):
-        self.dirty = []
-        self.lights.update(dt, self.dirty)
+        self.lights.update(dt)
 
     def draw(self):
         self.lights.clear(self.screen, self.background)
-        self.lights.draw(self.screen)
+        self.dirty = self.lights.draw(self.screen)
 
     def display_fps(self):
         caption = "{} - FPS: {:.2f}".format(CAPTION, self.clock.get_fps())
