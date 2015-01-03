@@ -11,15 +11,19 @@ BACKGROUND_COLOR = (5, 5, 15)
 
 class Rotator(object):
     def __init__(self, center, origin, image_angle=0):
+        self.cache = {}
         x_mag = center[0]-origin[0]
         y_mag = center[1]-origin[1]
         self.radius = math.hypot(x_mag,y_mag)
         self.start_angle = math.atan2(-y_mag,x_mag)-math.radians(image_angle)
 
     def __call__(self,angle,origin):
+        if (angle, origin) in self.cache:
+            return self.cache[angle, origin]
         new_angle = math.radians(angle)+self.start_angle
         new_x = origin[0] + self.radius*math.cos(new_angle)
         new_y = origin[1] - self.radius*math.sin(new_angle)
+        self.cache[angle, origin] = (new_x, new_y)
         return (new_x, new_y)
 
 
@@ -63,22 +67,20 @@ class Control(object):
     def __init__(self):
         self.screen = pg.display.get_surface()
         self.screen_rect = self.screen.get_rect()
-        self.background = pg.Surface(self.screen_rect.size).convert()
-        self.background.fill(BACKGROUND_COLOR)
         self.clock = pg.time.Clock()
         self.fps = 60.0
         self.done = False
+        self.background = pg.Surface(self.screen_rect.size).convert()
+        self.background.fill(BACKGROUND_COLOR)
         self.lights = self.make_lights()
-        self.dirty = []
+        self.dirty_rects = []
 
     def make_lights(self):
         lights = pg.sprite.LayeredDirty()
         y = self.screen_rect.bottom+20
-        fourths = [i*self.screen_rect.w/5 for i in range(1,5)]
-        SpotLight((fourths[0],y), 4, 140, 1, lights)
-        SpotLight((fourths[1],y), 4, 140, 0.5, lights)
-        SpotLight((fourths[2],y), 4, 140, 1, lights)
-        SpotLight((fourths[3],y), 4, 140, 0.5, lights)
+        for i in range(1,5):
+            start = 1 if i%2 else 0.5
+            SpotLight((i*self.screen_rect.w/5,y), 4, 140, start, lights)
         return lights
 
     def event_loop(self):
@@ -91,7 +93,7 @@ class Control(object):
 
     def draw(self):
         self.lights.clear(self.screen, self.background)
-        self.dirty = self.lights.draw(self.screen)
+        self.dirty_rects = self.lights.draw(self.screen)
 
     def display_fps(self):
         caption = "{} - FPS: {:.2f}".format(CAPTION, self.clock.get_fps())
@@ -105,7 +107,7 @@ class Control(object):
             self.event_loop()
             self.update(delta)
             self.draw()
-            pg.display.update(self.dirty)
+            pg.display.update(self.dirty_rects)
             self.display_fps()
             delta = self.clock.tick(self.fps)/1000.0
 
